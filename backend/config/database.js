@@ -7,14 +7,18 @@ const connectDB = async () => {
   try {
     console.log('🔄 Attempting to connect to MongoDB...')
     
-    const conn = await mongoose.connect(
-      process.env.MONGODB_URI, 
-      {
-        serverSelectionTimeoutMS: 5000, // 5 seconds timeout
-        socketTimeoutMS: 45000, // 45 seconds socket timeout
-        maxPoolSize: 10, // Maximum number of connections
-      }
-    )
+    if (!process.env.MONGODB_URI) {
+      console.log('❌ MONGODB_URI not found in environment variables')
+      console.log('🔄 Continuing with mock data mode...')
+      return
+    }
+
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 10000, // Increased to 10 seconds
+      socketTimeoutMS: 45000,
+    })
     
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`)
     console.log(`📊 Database: ${conn.connection.name}`)
@@ -22,23 +26,23 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ Database connection error:', error.message)
     console.log('💡 Troubleshooting tips:')
-    console.log('1. Check your MongoDB Atlas connection string')
-    console.log('2. Ensure your IP is whitelisted in MongoDB Atlas')
-    console.log('3. Check your internet connection')
-    console.log('4. Verify database name exists in Atlas')
-    
-    // Don't crash the app - allow it to start with mock data
+    console.log('1. Check MONGODB_URI in .env file')
+    console.log('2. Ensure IP is whitelisted in MongoDB Atlas')
+    console.log('3. Verify internet connection')
     console.log('🔄 Continuing with mock data mode...')
   }
 }
 
-// Handle connection events
-mongoose.connection.on('disconnected', () => {
-  console.log('❌ MongoDB disconnected')
+mongoose.connection.on('connected', () => {
+  console.log('✅ MongoDB connected successfully')
 })
 
 mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB connection error:', err)
+  console.error('❌ MongoDB connection error:', err.message)
+})
+
+mongoose.connection.on('disconnected', () => {
+  console.log('❌ MongoDB disconnected')
 })
 
 export default connectDB
