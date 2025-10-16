@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import mongoose from 'mongoose' // Add this import
 import connectDB from './config/database.js'
 import authRoutes from './routes/auth.js'
 import wasteRoutes from './routes/waste.js'
@@ -19,7 +20,7 @@ connectDB()
 
 // Routes
 app.use('/api/auth', authRoutes)
-app.use('/api/waste', wasteRoutes)
+app.use('/api/waste', wasteRoutes) // Make sure this line exists
 
 // Basic route
 app.get('/', (req, res) => {
@@ -48,6 +49,14 @@ app.use((err, req, res, next) => {
   })
 })
 
+// Handle 404 routes
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    message: 'Route not found',
+    path: req.originalUrl
+  })
+})
+
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
   console.log('🚨 Unhandled Promise Rejection:', err.message)
@@ -57,4 +66,12 @@ app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`)
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`)
   console.log(`📊 API URL: http://localhost:${PORT}`)
+  console.log(`🛣️  Available routes:`)
+  console.log(`   - GET  /api/health`)
+  console.log(`   - POST /api/auth/register`)
+  console.log(`   - POST /api/auth/login`)
+  console.log(`   - GET  /api/auth/profile`)
+  console.log(`   - GET  /api/waste/categories`)
+  console.log(`   - POST /api/waste/analyze`)
+  console.log(`   - GET  /api/waste/history`)
 })

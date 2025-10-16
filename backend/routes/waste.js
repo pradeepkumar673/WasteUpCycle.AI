@@ -2,10 +2,66 @@ import express from 'express'
 import auth from '../middleware/auth.js'
 import WasteMaterial from '../models/WasteMaterial.js'
 import User from '../models/User.js'
-import { analyzeWaste } from '../services/geminiService.js'
+import { analyzeWaste, getCategories } from '../services/geminiService.js'
 import { calculateCarbonFootprint } from '../services/carbonCalculator.js'
 
 const router = express.Router()
+
+// New endpoint to get categories for a material
+router.get('/categories', auth, async (req, res) => {
+  try {
+    const { material } = req.query
+    
+    if (!material) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Material parameter is required' 
+      })
+    }
+
+    console.log('🔍 Getting categories for material:', material)
+    const categories = await getCategories(material)
+    
+    res.json({
+      success: true,
+      categories,
+      count: categories.length
+    })
+
+  } catch (error) {
+    console.error('❌ Categories fetch error:', error)
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching categories',
+      categories: getDefaultCategories(material) // Return fallback categories
+    })
+  }
+})
+
+// Helper function for fallback categories
+const getDefaultCategories = (material = '') => {
+  const materialLower = material.toLowerCase();
+  
+  if (materialLower.includes('plastic')) {
+    return ['Bottles', 'Containers', 'Bags', 'Packaging', 'Toys'];
+  } else if (materialLower.includes('wood') || materialLower.includes('timber')) {
+    return ['Furniture', 'Pallets', 'Construction', 'Packaging', 'Natural'];
+  } else if (materialLower.includes('metal')) {
+    return ['Cans', 'Foils', 'Wires', 'Utensils', 'Scrap'];
+  } else if (materialLower.includes('glass')) {
+    return ['Bottles', 'Jars', 'Windows', 'Containers', 'Broken'];
+  } else if (materialLower.includes('textile') || materialLower.includes('cloth')) {
+    return ['Cotton', 'Denim', 'Wool', 'Synthetic', 'Mixed'];
+  } else if (materialLower.includes('electronic') || materialLower.includes('e-waste')) {
+    return ['Phones', 'Computers', 'Wires', 'Batteries', 'Appliances'];
+  } else if (materialLower.includes('paper') || materialLower.includes('cardboard')) {
+    return ['Newspaper', 'Cardboard', 'Books', 'Packaging', 'Office'];
+  } else if (materialLower.includes('organic') || materialLower.includes('food')) {
+    return ['Food Waste', 'Garden Waste', 'Agricultural', 'Compost', 'Mixed'];
+  } else {
+    return ['Household', 'Industrial', 'Packaging', 'Construction', 'Mixed'];
+  }
+}
 
 // Analyze waste material
 router.post('/analyze', auth, async (req, res) => {

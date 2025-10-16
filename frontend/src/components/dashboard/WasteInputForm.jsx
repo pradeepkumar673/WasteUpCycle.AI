@@ -13,32 +13,73 @@ const WasteInputForm = ({ onAnalyze }) => {
   })
   const [categories, setCategories] = useState([])
   const [loadingCategories, setLoadingCategories] = useState(false)
+  const [error, setError] = useState('')
 
   // Fetch categories when material changes
   useEffect(() => {
     const fetchCategories = async () => {
-      if (formData.material.trim().length < 2) {
+      const material = formData.material.trim()
+      
+      if (material.length < 2) {
         setCategories([])
+        setError('')
         return
       }
 
       setLoadingCategories(true)
+      setError('')
       try {
-        // We'll create a new API endpoint for getting categories
-        const response = await wasteAPI.getCategories(formData.material)
-        setCategories(response.categories)
+        console.log('🔄 Fetching categories for:', material)
+        const response = await wasteAPI.getCategories(material)
+        console.log('✅ Categories response:', response)
+        
+        if (response.success && response.categories && response.categories.length > 0) {
+          setCategories(response.categories)
+          setError('')
+        } else {
+          setCategories([])
+          setError('No categories found for this material')
+        }
       } catch (error) {
-        console.error('Error fetching categories:', error)
-        setCategories([])
+        console.error('❌ Error fetching categories:', error)
+        // Use fallback categories even if API fails
+        const fallbackCategories = getFallbackCategories(material)
+        setCategories(fallbackCategories)
+        setError('Using suggested categories')
       } finally {
         setLoadingCategories(false)
       }
     }
 
     // Debounce the API call
-    const timeoutId = setTimeout(fetchCategories, 500)
+    const timeoutId = setTimeout(fetchCategories, 800)
     return () => clearTimeout(timeoutId)
   }, [formData.material])
+
+  // Fallback categories function for frontend
+  const getFallbackCategories = (material = '') => {
+    const materialLower = material.toLowerCase();
+    
+    if (materialLower.includes('plastic')) {
+      return ['Bottles', 'Containers', 'Bags', 'Packaging', 'Toys'];
+    } else if (materialLower.includes('wood') || materialLower.includes('timber')) {
+      return ['Furniture', 'Pallets', 'Construction', 'Packaging', 'Natural'];
+    } else if (materialLower.includes('metal')) {
+      return ['Cans', 'Foils', 'Wires', 'Utensils', 'Scrap'];
+    } else if (materialLower.includes('glass')) {
+      return ['Bottles', 'Jars', 'Windows', 'Containers', 'Broken'];
+    } else if (materialLower.includes('textile') || materialLower.includes('cloth')) {
+      return ['Cotton', 'Denim', 'Wool', 'Synthetic', 'Mixed'];
+    } else if (materialLower.includes('electronic') || materialLower.includes('e-waste')) {
+      return ['Phones', 'Computers', 'Wires', 'Batteries', 'Appliances'];
+    } else if (materialLower.includes('paper') || materialLower.includes('cardboard')) {
+      return ['Newspaper', 'Cardboard', 'Books', 'Packaging', 'Office'];
+    } else if (materialLower.includes('organic') || materialLower.includes('food')) {
+      return ['Food Waste', 'Garden Waste', 'Agricultural', 'Compost', 'Mixed'];
+    } else {
+      return ['Household', 'Industrial', 'Packaging', 'Construction', 'Mixed'];
+    }
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -101,10 +142,20 @@ const WasteInputForm = ({ onAnalyze }) => {
           </div>
         )}
 
-        {/* Show message if no categories found */}
+        {/* Show messages */}
         {formData.material && !loadingCategories && categories.length === 0 && (
-          <div className="text-sm text-gray-500">
-            Start typing to see available categories for "{formData.material}"
+          <div className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded-lg">
+            Type more to see categories for "{formData.material}"
+          </div>
+        )}
+
+        {error && (
+          <div className={`text-sm p-3 rounded-lg ${
+            error.includes('Using suggested') 
+              ? 'text-green-600 bg-green-50' 
+              : 'text-red-600 bg-red-50'
+          }`}>
+            {error}
           </div>
         )}
 
