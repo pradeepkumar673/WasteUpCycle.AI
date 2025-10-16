@@ -2,7 +2,7 @@ import express from 'express'
 import auth from '../middleware/auth.js'
 import WasteMaterial from '../models/WasteMaterial.js'
 import User from '../models/User.js'
-import { analyzeWaste, getCategories } from '../services/openrouterService.js'
+import { analyzeWaste, getCategories } from '../services/huggingfaceService.js'
 import { calculateCarbonFootprint } from '../services/carbonCalculator.js'
 
 const router = express.Router()
