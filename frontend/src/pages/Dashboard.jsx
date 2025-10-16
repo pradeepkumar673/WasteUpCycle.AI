@@ -5,6 +5,7 @@ import ProductCard from '../components/dashboard/ProductCard'
 import ProductModal from '../components/dashboard/ProductModal'
 import CarbonCalculator from '../components/dashboard/CarbonCalculator'
 import LoadingSpinner from '../components/common/LoadingSpinner'
+import { wasteAPI } from '../services/api' // Add this import
 
 const Dashboard = () => {
   const { user } = useAuth()
@@ -12,47 +13,28 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const [error, setError] = useState('')
 
   const handleAnalyze = async (wasteData) => {
     setLoading(true)
+    setError('')
+    setResults(null)
+    
     try {
-      // Simulated API call - replace with actual API
-      const mockResults = {
-        carbonFootprint: 12.5,
-        carbonSavings: 10.2,
-        suggestions: [
-          {
-            id: '1',
-            productName: 'Plastic Bottle Planters',
-            description: 'Create beautiful vertical gardens using plastic bottles',
-            imageUrl: '/api/placeholder/300/200',
-            difficulty: 'Beginner',
-            estimatedCost: 150,
-            sellingPriceRange: '₹200-500',
-            earningPotential: '₹50-350',
-            carbonSavings: 8.5,
-            marketDemand: 85,
-            roi: 150,
-            timeRequired: '2-3 hours',
-            materialsNeeded: ['Plastic bottles', 'Soil', 'Seeds', 'Rope'],
-            toolsRequired: ['Scissors', 'Drill', 'Measuring tape'],
-            steps: [
-              'Clean and dry plastic bottles thoroughly',
-              'Cut bottles horizontally leaving one side attached',
-              'Create drainage holes at the bottom',
-              'Fill with soil and compost mixture',
-              'Plant seeds or saplings and arrange vertically'
-            ],
-            sellingPlatforms: ['Amazon', 'Flipkart', 'Local Nursery'],
-            targetAudience: 'Urban gardeners',
-            successRate: '90%',
-            customerRating: '4.5/5'
-          }
-        ]
+      console.log('🔄 Sending waste data to API:', wasteData)
+      
+      // Call the actual API instead of using mock data
+      const response = await wasteAPI.analyze(wasteData)
+      console.log('✅ API Response:', response.data)
+      
+      if (response.data.success) {
+        setResults(response.data)
+      } else {
+        throw new Error(response.data.message || 'Analysis failed')
       }
-      setResults(mockResults)
     } catch (error) {
-      console.error('Analysis failed:', error)
+      console.error('❌ Analysis failed:', error)
+      setError(error.response?.data?.message || 'Failed to analyze waste material. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -75,6 +57,12 @@ const Dashboard = () => {
       </div>
 
       <WasteInputForm onAnalyze={handleAnalyze} />
+
+      {error && (
+        <div className="mt-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       {loading && (
         <div className="flex justify-center items-center py-12">

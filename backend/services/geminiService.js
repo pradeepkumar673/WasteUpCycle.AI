@@ -212,7 +212,7 @@ const getMockSuggestions = (material, category, quantity, unit) => {
   console.log('🔄 Using mock data for:', material, category);
   const baseSuggestions = [
     {
-      id: '1',
+      id: '1', // Change from _id to id
       productName: `${material.charAt(0).toUpperCase() + material.slice(1)} ${category} Planters`,
       description: `Create beautiful planters and garden decor using ${material} ${category}. Perfect for urban gardening and home decoration.`,
       difficulty: 'Beginner',
@@ -238,7 +238,7 @@ const getMockSuggestions = (material, category, quantity, unit) => {
       customerRating: '4.5/5'
     },
     {
-      id: '2',
+      id: '2', // Change from _id to id
       productName: `Creative ${material} Home Organizers`,
       description: `Transform ${material} ${category} into practical home organization solutions with stylish designs for modern Indian homes.`,
       difficulty: 'Intermediate',
@@ -264,7 +264,7 @@ const getMockSuggestions = (material, category, quantity, unit) => {
       customerRating: '4.3/5'
     },
     {
-      id: '3',
+      id: '3', // Change from _id to id
       productName: `Upcycled ${material} Art Installation`,
       description: `Create unique artistic pieces and decorative installations from ${material} ${category} for contemporary home and office decor.`,
       difficulty: 'Advanced',
@@ -320,7 +320,7 @@ const parseAIResponse = (response) => {
     
     // Validate each suggestion has required fields
     const validatedSuggestions = parsed.suggestions.map((suggestion, index) => ({
-      id: suggestion.id || `ai_${index + 1}`,
+      id: suggestion.id || `ai_${index + 1}`, // Use id instead of _id
       productName: suggestion.productName || `AI Generated ${suggestion.difficulty || 'Beginner'} Product`,
       description: suggestion.description || 'AI-generated upcycling idea',
       difficulty: suggestion.difficulty || 'Beginner',

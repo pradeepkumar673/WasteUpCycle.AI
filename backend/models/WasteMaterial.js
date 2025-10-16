@@ -35,6 +35,8 @@ const wasteMaterialSchema = new mongoose.Schema({
     required: true
   },
   suggestions: [{
+    _id: false, // Add this to disable automatic _id generation for suggestions
+    id: String, // Change this from _id to id and make it String type
     productName: String,
     description: String,
     difficulty: String,
