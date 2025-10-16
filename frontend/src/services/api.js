@@ -28,6 +28,7 @@ API.interceptors.response.use(
 export const wasteAPI = {
   analyze: (wasteData) => API.post('/waste/analyze', wasteData),
   getHistory: () => API.get('/waste/history'),
+  getCategories: (material) => API.get(`/waste/categories?material=${encodeURIComponent(material)}`).then(res => res.data),
 }
 
 export default API

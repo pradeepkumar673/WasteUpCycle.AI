@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
-import { MATERIALS, UNITS } from '../../utils/constants'
+import React, { useState, useEffect } from 'react'
+import { UNITS } from '../../utils/constants'
+import { wasteAPI } from '../../services/api'
+import LoadingSpinner from '../common/LoadingSpinner'
 
 const WasteInputForm = ({ onAnalyze }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +11,34 @@ const WasteInputForm = ({ onAnalyze }) => {
     unit: 'kg',
     condition: 'clean'
   })
+  const [categories, setCategories] = useState([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
+
+  // Fetch categories when material changes
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (formData.material.trim().length < 2) {
+        setCategories([])
+        return
+      }
+
+      setLoadingCategories(true)
+      try {
+        // We'll create a new API endpoint for getting categories
+        const response = await wasteAPI.getCategories(formData.material)
+        setCategories(response.categories)
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        setCategories([])
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+
+    // Debounce the API call
+    const timeoutId = setTimeout(fetchCategories, 500)
+    return () => clearTimeout(timeoutId)
+  }, [formData.material])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -17,8 +47,6 @@ const WasteInputForm = ({ onAnalyze }) => {
     }
   }
 
-  const selectedMaterial = MATERIALS.find(m => m.value === formData.material)
-
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto">
       <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
@@ -26,28 +54,33 @@ const WasteInputForm = ({ onAnalyze }) => {
       </h2>
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Material Selection */}
+        {/* Material Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Material Type *
           </label>
-          <select
+          <input
+            type="text"
             value={formData.material}
-            onChange={(e) => setFormData({...formData, material: e.target.value, category: ''})}
+            onChange={(e) => setFormData({
+              ...formData, 
+              material: e.target.value,
+              category: '' // Reset category when material changes
+            })}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            placeholder="e.g., plastic bottles, old furniture, electronic waste..."
             required
-          >
-            <option value="">Select Material</option>
-            {MATERIALS.map(material => (
-              <option key={material.value} value={material.value}>
-                {material.label}
-              </option>
-            ))}
-          </select>
+          />
+          {loadingCategories && (
+            <div className="mt-2 flex items-center space-x-2 text-sm text-gray-500">
+              <LoadingSpinner size="small" />
+              <span>Finding categories...</span>
+            </div>
+          )}
         </div>
 
-        {/* Category Selection */}
-        {formData.material && (
+        {/* Dynamic Category Selection */}
+        {categories.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Specific Category *
@@ -59,12 +92,19 @@ const WasteInputForm = ({ onAnalyze }) => {
               required
             >
               <option value="">Select Category</option>
-              {selectedMaterial?.categories.map(cat => (
-                <option key={cat} value={cat.toLowerCase()}>
+              {categories.map((cat, index) => (
+                <option key={index} value={cat}>
                   {cat}
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Show message if no categories found */}
+        {formData.material && !loadingCategories && categories.length === 0 && (
+          <div className="text-sm text-gray-500">
+            Start typing to see available categories for "{formData.material}"
           </div>
         )}
 
@@ -121,7 +161,8 @@ const WasteInputForm = ({ onAnalyze }) => {
 
         <button
           type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-lg transition duration-300"
+          disabled={!formData.material || !formData.category || !formData.quantity}
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-lg transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           Generate AI-Powered Ideas
         </button>

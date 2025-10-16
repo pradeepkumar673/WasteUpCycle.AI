@@ -3,6 +3,126 @@ import axios from 'axios'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyCDxjg1_TwyTkJTgCXgK2PX64VhVvPZVNw"
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`
 
+// New function to get categories for any material
+export const getCategories = async (material) => {
+  try {
+    console.log('🔄 Getting categories for:', material);
+    
+    const prompt = createCategoriesPrompt(material);
+    
+    const response = await axios.post(GEMINI_API_URL, {
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.3,
+        topK: 20,
+        topP: 0.8,
+        maxOutputTokens: 500,
+      }
+    });
+
+    console.log('✅ Categories API Response received');
+    const aiResponse = response.data.candidates[0].content.parts[0].text;
+    console.log('📄 Raw categories response:', aiResponse);
+    
+    const categories = parseCategoriesResponse(aiResponse);
+    console.log('🎯 Parsed categories:', categories);
+    
+    return categories;
+    
+  } catch (error) {
+    console.error('❌ Gemini API error for categories:', error.response?.data || error.message);
+    console.log('🔄 Falling back to default categories...');
+    return getDefaultCategories(material);
+  }
+}
+
+const createCategoriesPrompt = (material) => {
+  return `
+IMPORTANT: You MUST return ONLY valid JSON. No other text or explanations.
+
+You are a waste management and recycling expert. For the material "${material}", generate relevant categories/types that would help in upcycling analysis.
+
+Return EXACTLY this JSON format:
+{
+  "categories": ["Category 1", "Category 2", "Category 3", "Category 4", "Category 5"]
+}
+
+GUIDELINES:
+- Return 3-5 most relevant categories
+- Categories should be specific to the material
+- Consider common forms and types of this material in waste
+- Focus on categories that are suitable for upcycling
+- Use clear, descriptive names
+- Examples: 
+  For "plastic": ["Bottles", "Containers", "Bags", "Packaging", "Toys"]
+  For "wood": ["Furniture", "Pallets", "Construction", "Packaging", "Natural"]
+  For "electronic": ["Phones", "Computers", "Wires", "Batteries", "Appliances"]
+
+Generate categories for: "${material}"
+  `;
+}
+
+const parseCategoriesResponse = (response) => {
+  try {
+    console.log('🔍 Parsing categories response...');
+    
+    // Clean the response
+    let cleanResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Find JSON object
+    const jsonStart = cleanResponse.indexOf('{');
+    const jsonEnd = cleanResponse.lastIndexOf('}') + 1;
+    
+    if (jsonStart === -1 || jsonEnd === 0) {
+      throw new Error('No JSON found in categories response');
+    }
+    
+    const jsonString = cleanResponse.substring(jsonStart, jsonEnd);
+    const parsed = JSON.parse(jsonString);
+    
+    if (!parsed.categories || !Array.isArray(parsed.categories)) {
+      throw new Error('Invalid categories format in response');
+    }
+    
+    return parsed.categories.slice(0, 5); // Limit to 5 categories
+    
+  } catch (error) {
+    console.error('❌ Error parsing categories response:', error);
+    console.log('🔄 Falling back to default categories...');
+    return getDefaultCategories();
+  }
+}
+
+const getDefaultCategories = (material = '') => {
+  const materialLower = material.toLowerCase();
+  
+  // Smart fallback categories based on material type
+  if (materialLower.includes('plastic')) {
+    return ['Bottles', 'Containers', 'Bags', 'Packaging', 'Toys'];
+  } else if (materialLower.includes('wood') || materialLower.includes('timber')) {
+    return ['Furniture', 'Pallets', 'Construction', 'Packaging', 'Natural'];
+  } else if (materialLower.includes('metal')) {
+    return ['Cans', 'Foils', 'Wires', 'Utensils', 'Scrap'];
+  } else if (materialLower.includes('glass')) {
+    return ['Bottles', 'Jars', 'Windows', 'Containers', 'Broken'];
+  } else if (materialLower.includes('textile') || materialLower.includes('cloth')) {
+    return ['Cotton', 'Denim', 'Wool', 'Synthetic', 'Mixed'];
+  } else if (materialLower.includes('electronic') || materialLower.includes('e-waste')) {
+    return ['Phones', 'Computers', 'Wires', 'Batteries', 'Appliances'];
+  } else if (materialLower.includes('paper') || materialLower.includes('cardboard')) {
+    return ['Newspaper', 'Cardboard', 'Books', 'Packaging', 'Office'];
+  } else if (materialLower.includes('organic') || materialLower.includes('food')) {
+    return ['Food Waste', 'Garden Waste', 'Agricultural', 'Compost', 'Mixed'];
+  } else {
+    return ['Household', 'Industrial', 'Packaging', 'Construction', 'Mixed'];
+  }
+}
+
+// Update the existing analyzeWaste function to handle dynamic materials
 export const analyzeWaste = async (material, category, quantity, unit) => {
   try {
     console.log('🔄 Calling REAL Gemini API for:', material, category, quantity, unit);
@@ -40,6 +160,7 @@ export const analyzeWaste = async (material, category, quantity, unit) => {
   }
 }
 
+// Update the createPrompt function to be more generic
 const createPrompt = (material, category, quantity, unit) => {
   return `
 IMPORTANT: You MUST return ONLY valid JSON. No other text or explanations.
@@ -81,6 +202,7 @@ CRITICAL GUIDELINES:
 - Market demand percentage (50-95%)
 - ROI percentage (80-300%)
 - Steps should be actionable and sequential
+- Be creative with the material "${material}" and category "${category}"
 
 Generate 3 diverse ideas with different difficulty levels (Beginner, Intermediate, Advanced).
   `;
